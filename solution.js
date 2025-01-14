@@ -8,7 +8,7 @@ const port = 3000;
 const db = new pg.Client({
   user: "postgres",
   host: "localhost",
-  database: "secrets",
+  database: "permalist",
   password: "123456",
   port: 5432,
 });
@@ -17,62 +17,53 @@ db.connect();
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
-app.get("/", (req, res) => {
-  res.render("home.ejs");
-});
+let items = [
+  { id: 1, title: "Buy milk" },
+  { id: 2, title: "Finish homework" },
+];
 
-app.get("/login", (req, res) => {
-  res.render("login.ejs");
-});
-
-app.get("/register", (req, res) => {
-  res.render("register.ejs");
-});
-
-app.post("/register", async (req, res) => {
-  const email = req.body.username;
-  const password = req.body.password;
-
+app.get("/", async (req, res) => {
   try {
-    const checkResult = await db.query("SELECT * FROM users WHERE email = $1", [
-      email,
-    ]);
+    const result = await db.query("SELECT * FROM items ORDER BY id ASC");
+    items = result.rows;
 
-    if (checkResult.rows.length > 0) {
-      res.send("Email already exists. Try logging in.");
-    } else {
-      const result = await db.query(
-        "INSERT INTO users (email, password) VALUES ($1, $2)",
-        [email, password]
-      );
-      console.log(result);
-      res.render("secrets.ejs");
-    }
+    res.render("index.ejs", {
+      listTitle: "Today",
+      listItems: items,
+    });
   } catch (err) {
     console.log(err);
   }
 });
 
-app.post("/login", async (req, res) => {
-  const email = req.body.username;
-  const password = req.body.password;
+app.post("/add", async (req, res) => {
+  const item = req.body.newItem;
+  // items.push({title: item});
+  try {
+    await db.query("INSERT INTO items (title) VALUES ($1)", [item]);
+    res.redirect("/");
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+app.post("/edit", async (req, res) => {
+  const item = req.body.updatedItemTitle;
+  const id = req.body.updatedItemId;
 
   try {
-    const result = await db.query("SELECT * FROM users WHERE email = $1", [
-      email,
-    ]);
-    if (result.rows.length > 0) {
-      const user = result.rows[0];
-      const storedPassword = user.password;
+    await db.query("UPDATE items SET title = ($1) WHERE id = $2", [item, id]);
+    res.redirect("/");
+  } catch (err) {
+    console.log(err);
+  }
+});
 
-      if (password === storedPassword) {
-        res.render("secrets.ejs");
-      } else {
-        res.send("Incorrect Password");
-      }
-    } else {
-      res.send("User not found");
-    }
+app.post("/delete", async (req, res) => {
+  const id = req.body.deleteItemId;
+  try {
+    await db.query("DELETE FROM items WHERE id = $1", [id]);
+    res.redirect("/");
   } catch (err) {
     console.log(err);
   }

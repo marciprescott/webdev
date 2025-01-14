@@ -1,59 +1,34 @@
 import express from "express";
 import bodyParser from "body-parser";
-import pg from "pg";
-import e from "express";
 
 const app = express();
 const port = 3000;
 
-const db = new pg.Client({
-  user: "postgres",
-  host: "localhost",
-  database: "secrets",
-  password: "winston",
-  port: 5433,
-});
-db.connect();
-
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
+let items = [
+  { id: 1, title: "Buy milk" },
+  { id: 2, title: "Finish homework" },
+];
+
 app.get("/", (req, res) => {
-  res.render("home.ejs");
+  res.render("index.ejs", {
+    listTitle: "Today",
+    listItems: items,
+  });
 });
 
-app.get("/login", (req, res) => {
-  res.render("login.ejs");
+app.post("/add", (req, res) => {
+  const item = req.body.newItem;
+  items.push({ title: item });
+  res.redirect("/");
 });
 
-app.get("/register", (req, res) => {
-  res.render("register.ejs");
-});
+app.post("/edit", (req, res) => {});
 
-app.post("/register", async (req, res) => {
-  const email = req.body.username;
-  const password = req.body.password;
+app.post("/delete", (req, res) => {});
 
-  const checkResult = await db.query("SELECT * FROM users WHERE email = $1", [
-    email,
-  ]);
-
-  if (checkResult.rows.length > 0) {
-    res.send("User already exists");
-    return;
-  } else {
-    const result = await db.query(
-      "INSERT INTO users(email, password) VALUES($1, $2)",
-      [email, password]
-    );
-  }
-  console.log(result);
-  res.render("secrets.ejs");
-});
-app.post("/login", async (req, res) => {
-  const email = req.body.username;
-  const password = req.body.password;
-});
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
